@@ -1,0 +1,28 @@
+{
+  "name": "moxie",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "墨写 — Web 文章生成器 Agent（微信公众号 / 人人都是产品经理）",
+  "scripts": {
+    "dev": "concurrently -k -n web,api -c cyan,magenta \"vite\" \"node server/index.mjs\"",
+    "server": "node server/index.mjs",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.5"
+  }
+}
