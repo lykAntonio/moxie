@@ -11,6 +11,7 @@ import {
   rewrite,
   cleanup,
   getEgressIp,
+  getKeys,
   type RewriteMode,
 } from "./lib/api";
 import { downloadAllImages } from "./lib/exporters";
@@ -40,6 +41,21 @@ export default function App() {
   const [imgProgress, setImgProgress] = useState<{ done: number; total: number; phase: string } | null>(null);
   const [pubProgress, setPubProgress] = useState<{ done: number; total: number; phase: string } | null>(null);
   const [ipModal, setIpModal] = useState<{ ip: string; note?: string; loading?: boolean } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [dsKey, setDsKey] = useState("");
+  const [amKey, setAmKey] = useState("");
+
+  function openSettings() {
+    setDsKey(localStorage.getItem("moxie_deepseek_key") || "");
+    setAmKey(localStorage.getItem("moxie_apimart_key") || "");
+    setSettingsOpen(true);
+  }
+  function saveSettings() {
+    localStorage.setItem("moxie_deepseek_key", dsKey.trim());
+    localStorage.setItem("moxie_apimart_key", amKey.trim());
+    setSettingsOpen(false);
+    flash("已保存到本浏览器");
+  }
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [toast, setToast] = useState<string>("");
   const [theme, setTheme] = useState<"light" | "dark">(
@@ -93,7 +109,7 @@ export default function App() {
     let raw = "";
     let final: { title: string; article: string; image_scenes: any[] } | null = null;
     try {
-      for await (const ev of streamNDJSON("/api/generate/stream", p, ac.signal)) {
+      for await (const ev of streamNDJSON("/api/generate/stream", { ...p, ...getKeys() }, ac.signal)) {
         if (ev.type === "phase") {
           setGenProgress((pr) => ({ phase: ev.phase, text: pr?.text || "" }));
         } else if (ev.type === "delta") {
@@ -158,7 +174,7 @@ export default function App() {
     abortRef.current = ac;
     let images: { url: string }[] = [];
     try {
-      for await (const ev of streamNDJSON("/api/illustrate/stream", { scenes }, ac.signal)) {
+      for await (const ev of streamNDJSON("/api/illustrate/stream", { scenes, ...getKeys() }, ac.signal)) {
         if (ev.type === "progress") {
           setImgProgress({ done: ev.done, total: ev.total, phase: ev.phase });
         } else if (ev.type === "done") {
@@ -362,6 +378,7 @@ export default function App() {
           onGenerate={handleGenerate}
           theme={theme}
           onToggleTheme={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
+          onOpenSettings={openSettings}
         />
         <HistoryPanel
           items={history}
@@ -409,6 +426,48 @@ export default function App() {
       </section>
 
       {toast && <div className="toast">{toast}</div>}
+
+      {settingsOpen && (
+        <div className="modal-mask" onClick={() => setSettingsOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">⚙️ 设置 · 你自己的 API Key</div>
+            <div className="modal-steps" style={{ marginTop: 0 }}>
+              Key 只保存在<b>你这台浏览器</b>，仅用于直接调用对应服务——用谁的 key 就计谁的费用，不会上传或共享。
+            </div>
+
+            <label className="set-label">
+              DeepSeek API Key（写文章用，必填）
+              <a href="https://platform.deepseek.com/" target="_blank" rel="noreferrer">获取 ↗</a>
+            </label>
+            <input
+              className="text-input"
+              style={{ width: "100%", margin: "0 0 14px" }}
+              type="password"
+              placeholder="sk-..."
+              value={dsKey}
+              onChange={(e) => setDsKey(e.target.value)}
+            />
+
+            <label className="set-label">
+              Apimart API Key（自动配图用，选填）
+              <a href="https://apimart.ai/" target="_blank" rel="noreferrer">获取 ↗</a>
+            </label>
+            <input
+              className="text-input"
+              style={{ width: "100%", margin: "0 0 16px" }}
+              type="password"
+              placeholder="不配图可留空"
+              value={amKey}
+              onChange={(e) => setAmKey(e.target.value)}
+            />
+
+            <div className="modal-actions">
+              <button className="ghost-btn" onClick={() => setSettingsOpen(false)}>取消</button>
+              <button className="primary-btn" style={{ margin: 0 }} onClick={saveSettings}>保存</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {ipModal && (
         <div className="modal-mask" onClick={() => setIpModal(null)}>

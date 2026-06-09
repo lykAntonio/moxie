@@ -85,17 +85,20 @@ npm install
 sh scripts/install-hooks.sh   # 安装防密钥泄露钩子（推荐）
 ```
 
-### 3. 配置 Key
-```bash
-cp .env.example .env
-```
-编辑 `.env`，把你的 DeepSeek Key 填到 `DEEPSEEK_API_KEY=` 后面（key 通常以 `sk-` 开头）。
-
-### 4. 启动
+### 3. 启动
 ```bash
 npm run dev
 ```
-打开终端提示的地址（默认 http://localhost:5273 ）即可使用。
+打开终端提示的地址（默认 http://localhost:5273 ）。
+
+### 4. 填入你自己的 Key
+打开页面后，点**右上角 ⚙️ 设置**，填入：
+- **DeepSeek API Key**（写文章用，必填）— [去获取](https://platform.deepseek.com/)
+- **Apimart API Key**（自动配图用，选填）— [去获取](https://apimart.ai/)
+
+> 🔐 Key 只保存在**你这台浏览器本地**，仅用于直接调用对应服务。**用谁的 key 就计谁的费用**，不会上传、不会共享给别人。
+
+（也可以不在界面填，改在 `.env` 里配 `DEEPSEEK_API_KEY` / `APIMART_API_KEY`，适合自己一个人用。）
 
 ---
 
@@ -113,13 +116,17 @@ npm run dev
 
 ## 🔑 关于各项 Key（按需配置）
 
-| 能力 | 需要的 Key | 是否必需 | 配置位置 |
-|------|-----------|---------|---------|
-| 写文章 | DeepSeek API Key | ✅ 必需 | `.env` 的 `DEEPSEEK_API_KEY` |
-| 自动配图 | Apimart Key | 想配图才需要 | `article-illustrator` skill 的 `config.json` |
+| 能力 | 需要的 Key | 是否必需 | 在哪填 |
+|------|-----------|---------|--------|
+| 写文章 | DeepSeek API Key | ✅ 必需 | 页面 ⚙️ 设置（或 `.env`） |
+| 自动配图 | Apimart Key | 想配图才需要 | 页面 ⚙️ 设置（或 `.env`） |
 | 发布公众号 | 公众号 AppID/Secret | 想直接发才需要 | 配套发布 skill 的 `.env` |
 
-> 模型默认 `deepseek-chat`，可在 `.env` 改 `DEEPSEEK_MODEL`。
+- **谁用谁的 Key、谁付费**：在 ⚙️ 设置里填的 Key 只存在你本地浏览器，随请求直接调用对应服务，不会用到别人的额度。
+- 后端优先用请求里带的 Key，没有时才回退到 `.env`。
+- 模型默认 `deepseek-chat`，可在 `.env` 改 `DEEPSEEK_MODEL`。
+
+> 💡 **想把它部署给多人在线用？** 别在服务器 `.env` 里放你自己的 Key，让每个人在 ⚙️ 设置里填各自的 Key 即可——这样不会替别人买单。
 
 ---
 

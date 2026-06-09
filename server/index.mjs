@@ -108,10 +108,11 @@ function buildMessages(p) {
 }
 
 /* ---------- DeepSeek 调用 ---------- */
-async function callDeepSeek(messages, json = true) {
-  if (!DEEPSEEK_KEY) {
+async function callDeepSeek(messages, json = true, key) {
+  const useKey = key || DEEPSEEK_KEY;
+  if (!useKey) {
     const err = new Error(
-      "未配置 DEEPSEEK_API_KEY。请在 墨写/.env 中填入你的 DeepSeek key 后重启服务。"
+      "未配置 DeepSeek Key。请点右上角「⚙️ 设置」填入你自己的 DeepSeek Key（或在 .env 配置）。"
     );
     err.code = "NO_KEY";
     throw err;
@@ -127,7 +128,7 @@ async function callDeepSeek(messages, json = true) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${DEEPSEEK_KEY}`,
+      Authorization: `Bearer ${useKey}`,
     },
     body: JSON.stringify(body),
   });
@@ -177,15 +178,16 @@ function buildStreamMessages(p) {
   ];
 }
 
-async function callDeepSeekStream(messages, onDelta, signal) {
-  if (!DEEPSEEK_KEY) {
-    const err = new Error("未配置 DEEPSEEK_API_KEY。请在 墨写/.env 中填入你的 DeepSeek key 后重启服务。");
+async function callDeepSeekStream(messages, onDelta, signal, key) {
+  const useKey = key || DEEPSEEK_KEY;
+  if (!useKey) {
+    const err = new Error("未配置 DeepSeek Key。请点右上角「⚙️ 设置」填入你自己的 DeepSeek Key（或在 .env 配置）。");
     err.code = "NO_KEY";
     throw err;
   }
   const resp = await fetch(DEEPSEEK_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_KEY}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${useKey}` },
     body: JSON.stringify({ model: DEEPSEEK_MODEL, messages, temperature: 1.0, max_tokens: 8000, stream: true }),
     signal,
   });
@@ -272,7 +274,7 @@ const REWRITE_MODES = {
     "⑤ 该直说就直说，信任读者，可适度带个人观点与具体细节。保持原意与信息完整。",
 };
 
-async function rewriteText(text, mode) {
+async function rewriteText(text, mode, key) {
   const instruction = REWRITE_MODES[mode] || REWRITE_MODES.polish;
   const messages = [
     {
@@ -283,7 +285,7 @@ async function rewriteText(text, mode) {
     },
     { role: "user", content: `${instruction}\n\n原文：\n${text}` },
   ];
-  return callDeepSeek(messages, false);
+  return callDeepSeek(messages, false, key);
 }
 
 /* ---------- 出图：调用 generate.py --batch ---------- */
@@ -291,7 +293,7 @@ function pickSize(index) {
   return index === 2 ? "1:1" : "16:9"; // 结尾图方形，其余横向
 }
 
-function runIllustrator(scenes, onProgress, onSpawn) {
+function runIllustrator(scenes, onProgress, onSpawn, apimartKey) {
   return new Promise((resolve, reject) => {
     const stamp = Date.now().toString(36);
     const outDir = path.join("illustrations", stamp); // 相对 ROOT（generate.py 要求相对路径）
@@ -307,8 +309,10 @@ function runIllustrator(scenes, onProgress, onSpawn) {
     const tasksFile = path.join(ROOT, `.tasks-${stamp}.json`);
     fs.writeFileSync(tasksFile, JSON.stringify(tasks), "utf-8");
 
+    // 优先用请求自带的 Apimart Key；否则回退到 .env，再否则由 generate.py 读 skill 的 config.json
     const env = { ...process.env };
-    if (process.env.APIMART_API_KEY) env.APIMART_API_KEY = process.env.APIMART_API_KEY;
+    const useApimart = apimartKey || process.env.APIMART_API_KEY;
+    if (useApimart) env.APIMART_API_KEY = useApimart;
 
     const child = spawn("python3", [GENERATE_PY, "--batch", path.basename(tasksFile)], {
       cwd: ROOT,
@@ -512,7 +516,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && pathname === "/api/generate") {
       const p = await readBody(req);
       if (!p.title) return sendJSON(res, 400, { error: "缺少文章标题" });
-      const result = await callDeepSeek(buildMessages(p));
+      const result = await callDeepSeek(buildMessages(p), true, p.deepseekKey);
       return sendJSON(res, 200, {
         title: result.title || p.title,
         article: result.article || "",
@@ -538,7 +542,8 @@ const server = http.createServer(async (req, res) => {
         const full = await callDeepSeekStream(
           buildStreamMessages(p),
           (d) => send({ type: "delta", text: d }),
-          ac.signal
+          ac.signal,
+          p.deepseekKey
         );
         const { title, article, scenes } = splitArticle(full, p.title);
         send({ type: "done", title, article, image_scenes: scenes });
@@ -549,7 +554,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && pathname === "/api/illustrate/stream") {
-      const { scenes } = await readBody(req);
+      const { scenes, apimartKey } = await readBody(req);
       if (!Array.isArray(scenes) || scenes.length === 0) {
         return sendJSON(res, 400, { error: "缺少配图场景 scenes" });
       }
@@ -575,7 +580,8 @@ const server = http.createServer(async (req, res) => {
         const images = await runIllustrator(
           scenes,
           (pg) => send({ type: "progress", ...pg }),
-          (c) => (child = c)
+          (c) => (child = c),
+          apimartKey
         );
         send({ type: "done", images });
       } catch (e) {
@@ -605,9 +611,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && pathname === "/api/rewrite") {
-      const { text, mode } = await readBody(req);
+      const { text, mode, deepseekKey } = await readBody(req);
       if (!text || !text.trim()) return sendJSON(res, 400, { error: "缺少要改写的文本" });
-      const out = await rewriteText(text, mode);
+      const out = await rewriteText(text, mode, deepseekKey);
       return sendJSON(res, 200, { text: out });
     }
 
@@ -641,11 +647,11 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && pathname === "/api/illustrate") {
-      const { scenes } = await readBody(req);
+      const { scenes, apimartKey } = await readBody(req);
       if (!Array.isArray(scenes) || scenes.length === 0) {
         return sendJSON(res, 400, { error: "缺少配图场景 scenes" });
       }
-      const images = await runIllustrator(scenes);
+      const images = await runIllustrator(scenes, undefined, undefined, apimartKey);
       return sendJSON(res, 200, { images });
     }
 

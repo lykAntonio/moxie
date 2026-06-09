@@ -1,5 +1,15 @@
 import type { GenParams, ImageScene } from "./types";
 
+// 用户自己的 key（存浏览器本地，随请求发给后端；后端无则回退 .env）
+export const KEY_DEEPSEEK = "moxie_deepseek_key";
+export const KEY_APIMART = "moxie_apimart_key";
+export function getKeys() {
+  return {
+    deepseekKey: localStorage.getItem(KEY_DEEPSEEK) || "",
+    apimartKey: localStorage.getItem(KEY_APIMART) || "",
+  };
+}
+
 export interface GenerateResult {
   title: string;
   article: string;
@@ -26,12 +36,12 @@ export interface IllustrateResult {
 }
 
 export function illustrate(scenes: string[]) {
-  return post<IllustrateResult>("/api/illustrate", { scenes });
+  return post<IllustrateResult>("/api/illustrate", { scenes, ...getKeys() });
 }
 
 export type RewriteMode = "spoken" | "concise" | "expand" | "polish" | "humanize";
 export function rewrite(text: string, mode: RewriteMode) {
-  return post<{ text: string }>("/api/rewrite", { text, mode });
+  return post<{ text: string }>("/api/rewrite", { text, mode, ...getKeys() });
 }
 
 export function cleanup(keep: string[]) {

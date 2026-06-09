@@ -19,9 +19,10 @@ interface Props {
   onGenerate: (p: GenParams) => void;
   theme: "light" | "dark";
   onToggleTheme: () => void;
+  onOpenSettings: () => void;
 }
 
-export default function InputPanel({ loading, onGenerate, theme, onToggleTheme }: Props) {
+export default function InputPanel({ loading, onGenerate, theme, onToggleTheme, onOpenSettings }: Props) {
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState<Platform>("wechat");
   const [type, setType] = useState(TYPES[0]);
@@ -56,6 +57,9 @@ export default function InputPanel({ loading, onGenerate, theme, onToggleTheme }
       <div className="panel-head">
         <span className="brand">墨<span className="brand-accent">写</span></span>
         <span className="brand-sub">文章生成器</span>
+        <button className="theme-toggle" onClick={onOpenSettings} title="设置 API Key">
+          ⚙️
+        </button>
         <button
           className="theme-toggle"
           onClick={onToggleTheme}
