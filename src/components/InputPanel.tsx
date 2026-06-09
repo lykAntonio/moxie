@@ -17,9 +17,11 @@ const LENGTHS: { value: GenParams["length"]; label: string }[] = [
 interface Props {
   loading: boolean;
   onGenerate: (p: GenParams) => void;
+  theme: "light" | "dark";
+  onToggleTheme: () => void;
 }
 
-export default function InputPanel({ loading, onGenerate }: Props) {
+export default function InputPanel({ loading, onGenerate, theme, onToggleTheme }: Props) {
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState<Platform>("wechat");
   const [type, setType] = useState(TYPES[0]);
@@ -54,6 +56,13 @@ export default function InputPanel({ loading, onGenerate }: Props) {
       <div className="panel-head">
         <span className="brand">墨<span className="brand-accent">写</span></span>
         <span className="brand-sub">文章生成器</span>
+        <button
+          className="theme-toggle"
+          onClick={onToggleTheme}
+          title={theme === "light" ? "切换到夜间模式" : "切换到日间模式"}
+        >
+          {theme === "light" ? "🌙 夜间" : "☀️ 日间"}
+        </button>
       </div>
 
       <label className="field-label">文章标题</label>

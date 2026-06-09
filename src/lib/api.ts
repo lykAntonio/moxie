@@ -28,3 +28,66 @@ export interface IllustrateResult {
 export function illustrate(scenes: string[]) {
   return post<IllustrateResult>("/api/illustrate", { scenes });
 }
+
+export type RewriteMode = "spoken" | "concise" | "expand" | "polish" | "humanize";
+export function rewrite(text: string, mode: RewriteMode) {
+  return post<{ text: string }>("/api/rewrite", { text, mode });
+}
+
+export function cleanup(keep: string[]) {
+  return post<{ removed: number }>("/api/cleanup", { keep });
+}
+
+export async function getEgressIp(): Promise<string> {
+  const res = await fetch("/api/egress-ip");
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error || "查询失败");
+  return data.ip as string;
+}
+
+// NDJSON 流：逐行 yield 后端推送的事件
+export async function* streamNDJSON(
+  url: string,
+  body: unknown,
+  signal?: AbortSignal
+): AsyncGenerator<any> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    let msg = `请求失败 (${res.status})`;
+    try {
+      msg = (await res.json())?.error || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (line) yield JSON.parse(line);
+    }
+  }
+  if (buf.trim()) yield JSON.parse(buf.trim());
+}
+
+// 从流式原文里实时抽取“正文”部分用于打字预览
+export function extractArticleLive(raw: string): string {
+  let s = raw;
+  const ai = s.indexOf("===ARTICLE===");
+  if (ai >= 0) s = s.slice(ai + "===ARTICLE===".length);
+  else return ""; // 还没开始写正文
+  const si = s.indexOf("===IMAGE_SCENES===");
+  if (si >= 0) s = s.slice(0, si);
+  return s.replace(/^\s*TITLE:.*\n?/, "").trim();
+}

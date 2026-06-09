@@ -5,6 +5,7 @@ interface Props {
   activeId: string | null;
   onRestore: (item: HistoryItem) => void;
   onDelete: (id: string) => void;
+  onCleanup: () => void;
 }
 
 const PLATFORM_LABEL: Record<string, string> = { wechat: "公众号", woshipm: "人人都是PM" };
@@ -18,10 +19,15 @@ function ago(ts: number): string {
   return `${x.getMonth() + 1}/${x.getDate()}`;
 }
 
-export default function HistoryPanel({ items, activeId, onRestore, onDelete }: Props) {
+export default function HistoryPanel({ items, activeId, onRestore, onDelete, onCleanup }: Props) {
   return (
     <div className="history">
-      <div className="history-head">历史记录 <span className="count">{items.length}</span></div>
+      <div className="history-head">
+        历史记录 <span className="count">{items.length}</span>
+        <button className="cleanup-btn" onClick={onCleanup} title="删除服务器上未被任何记录引用的配图文件">
+          🧹 清理无用图
+        </button>
+      </div>
       {items.length === 0 && <div className="history-empty">暂无历史，生成后自动保存</div>}
       <div className="history-list">
         {items.map((it) => (
