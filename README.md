@@ -4,6 +4,12 @@
 
 **一个把"想法"变成"图文成稿"的 AI 文章生成器**
 
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
+![Powered by DeepSeek](https://img.shields.io/badge/Powered%20by-DeepSeek-4D6BFE)
+![微信公众号](https://img.shields.io/badge/一键发布-微信公众号-07C160?logo=wechat&logoColor=white)
+
 为「微信公众号」和「人人都是产品经理」而生 —— 填几个选项，AI 帮你写好文章、配好插画、排好版，还能一键推送到公众号草稿箱。
 
 <br/>
