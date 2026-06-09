@@ -33,6 +33,14 @@
    ```
    打开终端里 Vite 给出的地址（默认 http://localhost:5273）。
 
+## 安全（防密钥泄露）
+
+- 密钥只放本地 `.env`（已被 `.gitignore` 忽略）；`.env.example` 只放占位符。
+- 克隆后运行一次，安装防泄露 pre-commit 钩子（提交含 `sk-` / AppSecret 等会被拦截）：
+  ```bash
+  sh scripts/install-hooks.sh
+  ```
+
 ## 用法
 
 1. 左侧填标题/平台/类型/读者/语气/长度 → 「一键生成文章」（仅出文字，快）
